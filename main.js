@@ -10,6 +10,8 @@ let positionY = 0;
 let currentX = 0;
 let currentY = 0;
 
+const MOVE_UNIT = 64;
+
 window.addEventListener('keyup', keymove, false);
 
 tick();
@@ -18,13 +20,13 @@ tick();
 function keymove(event) {
   let key_code = event.keyCode;
   if(key_code === 37) {
-    positionX -= 32;
+    positionX -= MOVE_UNIT;
   } else if (key_code === 38) {
-    positionY -= 32;
+    positionY -= MOVE_UNIT;
   } else if (key_code === 39) {
-    positionX +=32;
+    positionX += MOVE_UNIT;
   } else if (key_code === 40) {
-    positionY += 32;
+    positionY += MOVE_UNIT;
   }
 }
 

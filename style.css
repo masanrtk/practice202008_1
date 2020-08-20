@@ -1,7 +1,14 @@
 .mover {
   position: fixed;
-  top: 0;
-  left: 0;
+  top: 500;
+  left: 500;
   will-cange: transform;
   font-size: 5rem;
+  color: #ff0000;
+}
+
+#floor {
+  position: fixed;
+  top: 500;
+  left: 500;
 }
