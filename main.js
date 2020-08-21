@@ -2,18 +2,32 @@ const create_floor_btn = document.getElementById("createfloor");
 const floor_area = document.getElementById("floor");
 
 let floor_size = 5;
-var floor_containts = []; // リファクタリング時はfloorObjectのプロパティ
-let brave_position_x, brave_position_y;  // リファクタリング時はbraveObjectのプロパティ
+let floor_containts = []; // リファクタリング時はfloorObjectのプロパティ
+
+let direction;
+
 
 create_floor_btn.addEventListener("click", newGame);
 
+
 function newGame() {
+// stopOldGame();
+// removeEventListener();
   createNewFloor();
   placeObject('G');
   placeObject('m');
   placeObject('b');
   depictFloorAndObject();
+  window.addEventListener('keyup', keyInput, false);
+  runGame();
 }
+
+function runGame() {
+  depictFloorAndObject();
+  setTimeout(runGame, 333);  // CPUを３～５％も消費している　くそ
+}
+
+
 
 /*
  * リファクタリングのときにObjectにしたときにイベントのコールバックになる？
@@ -57,13 +71,15 @@ function depictFloorAndObject() {
     }
   }
 
-  floor_area.innerHTML = "";
+  floor_area.innerHTML = "";  // これ問題ないかな？
+
   floor_area.appendChild(floor_table);
   console.log(floor_area);
 }
 
 
 // get Positionと placeは共通化可能
+/*
 function placeObject(type) {
   let x, y;
   let random;
@@ -81,6 +97,85 @@ function placeObject(type) {
   floor_containts[y * floor_size + x] = type;
 
 }
+*/
+function placeObject(type) {
+  let position,
+      random;
+
+  do {
+    random = Math.floor(Math.random() * (floor_size * floor_size));
+    position = positionArr(random);
+    console.log(position);
+  } while (floor_containts[position[1] * floor_size + position[0]] !== 'f');
+
+  floor_containts[position[1] * floor_size + position[0]] = type;
+}
+
+function positionArr(position) {
+  let y = Math.floor(position / floor_size),
+      x = position - y * floor_size;
+  return [x, y];
+}
+
+
+function keyInput(event) {
+  let key_code = event.keyCode,
+      move_direction;
+
+  if(key_code === 37) {  // move left
+    move_direction = -1;
+  } else if(key_code === 38) { // move up
+    move_direction = -floor_size;
+  } else if(key_code === 39) { // move right
+    move_direction = 1;
+  } else if(key_code === 40) { // move down
+    move_direction = floor_size;
+  } else { // nothing happens
+  }
+
+  braveMove(move_direction);
+
+}
+
+// これが肝なんだけど、今だとbraveの動きに連動してすべてが決定するつくりになるなぁ
+// 拡張性を考えると、braveの移動とそれ以外の判定は別にしたいところ
+// とするのであれば、判定部は別だしで、next_positionだけを返す関数にすべきか
+function braveMove(move_direction) {
+  let brave_position = bravePosition(),
+      next_position = brave_position + move_direction;
+
+  // braveの移動先、braveの移動方法が正常なら
+  if(next_position >= 0 && next_position < floor_size * floor_size) {
+    if((move_direction === -1 && positionArr(brave_position)[0] === 0)
+      || (move_direction === 1 && positionArr(brave_position)[0] === floor_size - 1)) {
+    } else {
+        if(floor_containts[next_position] === 'f') {
+/* ここを改良する必要がある */
+          floor_containts[brave_position] = 'f';
+          floor_containts[next_position] = 'b';
+        } else if(floor_containts[next_position] === 'G') {
+          // floor clear
+        } else if(floor_containts[next_position] === 'm') {
+          // Gameover
+        }
+      }
+  }
+}
+
+
+function bravePosition() { // ｘとｙの値は、brave オブジェクトのプロパティにできる
+  let i;
+  for(i = 0; i < floor_size * floor_size; i++) {
+    if(floor_containts[i] === 'b') {
+      console.log(i);
+      return i;
+    }
+  }
+}
+
+
+
+
 
 
 // キーボードの矢印キーで移動させる
