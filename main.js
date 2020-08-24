@@ -3,6 +3,7 @@ const floor_area = document.getElementById("floor");
 
 let floor_size = 5;
 let floor_containts = []; // リファクタリング時はfloorObjectのプロパティ
+let depth = 1;
 
 let direction;
 
@@ -23,6 +24,7 @@ function newGame() {
 }
 
 function runGame() {
+
   depictFloorAndObject();
   setTimeout(runGame, 333);  // CPUを３～５％も消費している　くそ
 }
@@ -98,8 +100,10 @@ function placeObject(type) {
 
 }
 */
+
+
 function placeObject(type) {
-  let position,
+  let position,  // position[0]:x軸、position[1]:y軸
       random;
 
   do {
@@ -117,7 +121,8 @@ function positionArr(position) {
   return [x, y];
 }
 
-
+// イベントリスナーのcallback関数だけれど、braveMoveとあまりにも
+// 密結合すぎる
 function keyInput(event) {
   let key_code = event.keyCode,
       move_direction;
@@ -131,17 +136,70 @@ function keyInput(event) {
   } else if(key_code === 40) { // move down
     move_direction = floor_size;
   } else { // nothing happens
+    return; // あまりよくない終わり方
   }
 
-  braveMove(move_direction);
+  updateTurn(move_direction);
+//  braveMove(move_direction);
 
 }
 
-// これが肝なんだけど、今だとbraveの動きに連動してすべてが決定するつくりになるなぁ
+// ターンがキーボードの入力で進んでいくことになっている
 // 拡張性を考えると、braveの移動とそれ以外の判定は別にしたいところ
-// とするのであれば、判定部は別だしで、next_positionだけを返す関数にすべきか
+// とするのであれば、判定部は別だし
+function updateTurn(move_direction) {
+  let brave_position = braveMove(move_direction),
+      monster_position = monsterMove(), // モンスターの数が増えたら問題
+      gate_position = getCurrentPosition('G');
+
+  if(brave_position === gate_position) {
+    clearCurrentFloor();
+    nextFloor();
+  } else if(brave_position === monster_position) {　// モンスターの数が増えたら問題
+    gameOver();
+  } else {
+    updateNextTurn(brave_position, monster_position);
+  }
+
+}
+
+
+function clearCurrentFloor() {
+// congraturation!
+
+}
+
+function nextFloor() {
+  depth++;
+  createNewFloor();
+  placeObject('G');
+  placeObject('m');
+  placeObject('b');
+}
+
+function gameOver() {
+// disappointed!!!
+
+}
+
+function updateNextTurn(next_brave_position, next_monster_position) {
+  let current_brave_position = getCurrentPosition('b'),
+      current_monster_position = getCurrentPosition('m');
+
+  floor_containts[current_brave_position] = 'f';
+  floor_containts[next_brave_position] = 'b';
+  floor_containts[current_monster_position] = 'f';
+  floor_containts[next_monster_position] = 'm';
+
+  // floorCurruption();
+  placeObject('D');
+
+}
+
+
+// braveの移動先を返す
 function braveMove(move_direction) {
-  let brave_position = bravePosition(),
+  let brave_position = getCurrentPosition('b'),
       next_position = brave_position + move_direction;
 
   // braveの移動先、braveの移動方法が正常なら
@@ -149,20 +207,57 @@ function braveMove(move_direction) {
     if((move_direction === -1 && positionArr(brave_position)[0] === 0)
       || (move_direction === 1 && positionArr(brave_position)[0] === floor_size - 1)) {
     } else {
-        if(floor_containts[next_position] === 'f') {
-/* ここを改良する必要がある */
-          floor_containts[brave_position] = 'f';
-          floor_containts[next_position] = 'b';
-        } else if(floor_containts[next_position] === 'G') {
-          // floor clear
-        } else if(floor_containts[next_position] === 'm') {
-          // Gameover
-        }
+      if(floor_containts[next_position] === 'f') {
+          return next_position;
       }
+    }
   }
 }
 
 
+function monsterMove() {
+  let monster_position = getCurrentPosition('m'),
+      move_direction,
+      next_position,
+      random;
+
+  // monsterの移動先が存在しているかどうか
+  if((monster_position - 1 >= 0 && floor_containts[monster_position - 1] === 'f')
+     || (monster_position - floor_size >= 0 && floor_containts[monster_position - floor_size] === 'f')
+     || (monster_position + 1 < floor_size * floor_size && floor_containts[monster_position + 1] === 'f')
+     || (monster_position + floor_size < floor_size * floor_size && floor_containts[monster_position + floor_size] === 'f')
+   ) {
+
+   } else {
+     return monster_position;
+   }
+
+  do{
+    random = Math.random();
+    if(random < 0.25) { // left
+      move_direction = -1;
+    } else if(0.25 < random && random < 0.5) { // up
+      move_direction = -floor_size;
+    } else if(0.5 < random && random < 0.75) { //right
+      move_direction = 1;
+    } else { // down
+      move_direction = floor_size;
+    }
+    next_position = monster_position + move_direction;
+    // monsterの移動先が正常なら
+    if(next_position >= 0 && next_position < floor_size * floor_size) {
+      if((move_direction === -1 && positionArr(monster_position)[0] === 0)
+        || (move_direction === 1 && positionArr(monster_position)[0] === floor_size - 1)) {
+      } else {
+        if(floor_containts[next_position] === 'f') {
+          return next_position;
+        }
+      }
+    }
+  } while(1);
+}
+
+/*
 function bravePosition() { // ｘとｙの値は、brave オブジェクトのプロパティにできる
   let i;
   for(i = 0; i < floor_size * floor_size; i++) {
@@ -172,6 +267,27 @@ function bravePosition() { // ｘとｙの値は、brave オブジェクトの�
     }
   }
 }
+*/
+
+function getCurrentPosition(type) { // ｘとｙの値は、type オブジェクトのプロパティにできる
+  let i;
+  for(i = 0; i < floor_size * floor_size; i++) {
+    if(floor_containts[i] === type) {
+      console.log(i);
+      return i;
+    }
+  }
+}
+
+
+
+
+
+
+
+
+
+
 
 
 
