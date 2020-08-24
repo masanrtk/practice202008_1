@@ -2,13 +2,14 @@
 <html lang = "ja">
 <head>
 <meta charset = "UTF-8">
-<title>試験出社習作</title>
+<title>へっぽこ冒険者のダンジョン紀行</title>
 <meta name = "description" content = "">
 <meta name = "keywords" content = "">
 <link href = "style.css" rel = "stylesheet" media = "all">
 <script src = "main.js" defer></script>
 </head>
 <body>
+  <h1>へっぽこ冒険者のダンジョン紀行</h1>
   <button id = "createfloor">New Game</button>
   <div id = "message"></div>
   <div id = "floor"></div>
@@ -19,43 +20,73 @@
     <p>Nwe Gameボタンをクリックすると迷宮フロアが出現します。</p>
     <p>矢印キーで操作します。</p>
     <p>brave<img src = "brave.png" width = "32" height = "32">を動かして、gate<img src = "Gate.png" width = "32" height = "32">に進んでください。</p>
-
-
   </div>
 
-<!--
-  <div id = "test"></div>
-  <div >
-    <img id = "floor" src = "floor.png">
-  </div>
-  <div class = "mover">
-    x
-  </div>
--->
+  <div id = "spec">
 
 <!--
-  <div id = "table">
-  <table>
-    <tbody>
-      <tr>
-        <td>F</td>
-        <td>F</td>
-        <td>F</td>
-      </tr>
-      <tr>
-        <td>F</td>
-        <td>F</td>
-        <td>F</td>
-      </tr>
-      <tr>
-        <td>F</td>
-        <td>F</td>
-        <td>F</td>
-      </tr>
-    </tbody>
-  </table>
-  </div>
+へっぽこ冒険者のダンジョン紀行
+
+https://masanrtk.github.io/practice202008_1/
+
+バージョン0.01
+
+習作１
+ゲーム
+・　キャラクタをSTARTからGOALに導く
+・　f (floor)をｎｘｎに配置
+・　b (brave)をfのいずれかにランダムに配置
+・　G (Goal)をfのいずれかにランダムに配置
+・　M (Monster)をfのいずれかにランダムに配置
+
+bの挙動
+・　矢印キーを放したときに、その方向に１マス移動
+・　Gにたどり着くまで繰り返し
+・　Mにぶつかると終わり
+
+fの挙動
+・　bが移動すると、１マス消滅させる
+・　１マス消滅のルール：　
+・　消滅させたマスに、
+　　bがいたとき：
+　　Mがいたとき：
+　　Gがあるとき：
+・　bがGにたどり着くと、新しくfを作り直す
+・　fは階層番号があり、作り直すたびに大きくなる
+
+
+Mの挙動
+・　bが移動すると、決められたルールに従って、移動
+・　決められたルール１：　ランダムに近接に１マス移動
+
+
+
+
+
+まずは４角形のマスを正方形にｎｘｎで配置して、STARTとGOALをランダム配置
+・　キャラクタは１マスずつ移動する
+・　キャラクタの移動の度に、外周に面しているマスのどこか一つなくなる
+・　敵キャラもランダムに配置、キャラクタの移動に伴い１マスランダムに移動
+・　レベルが上がるたびにマス数と敵キャラクタ数が増えていく
+・　運ゲーム
+・　onkeydownで矢印キーのイベントを補足するか、onclickでマウスで操作するか
+
+
+・　出来上がったくそげーの公開
+	https://www.apnari.com/entry/GitHubPages-intro
+・　Math.random() * N（N: テーブルのサイズ　100＝0～99%）
+	Math.floor(Math.random() * 100) + 1;
+
+
+格納されているデータを取り出して表示
+
+TODO
+状況によってキーボードを押したときのアクションを変えたい。
+→ addEventListenerでコールバックされる関数を動的に変更する？
+
 -->
+
+
 
 </body>
 </html>
