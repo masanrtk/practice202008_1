@@ -1,31 +1,48 @@
 const create_floor_btn = document.getElementById("createfloor");
+const message_area = document.getElementById("message");
 const floor_area = document.getElementById("floor");
 
-let floor_size = 5;
+let floor_size,
+    default_floor_size = 5;
 let floor_containts = []; // リファクタリング時はfloorObjectのプロパティ
-let depth = 1;
+let depth = 1,
+    max_depth = 1;
 
-let direction;
+let is_game_running = 0; // geme実行中かどうか、名前よくないな
+
+let stayCurrentRatio = 0.3; // 同じ場所に居続ける確率（固定値でよいか？）
 
 
+let change; // これも名前悪い
+
+// let direction;
+
+// ボタンクリックでゲームが始まる
 create_floor_btn.addEventListener("click", newGame);
-
 
 function newGame() {
 // stopOldGame();
 // removeEventListener();
+  depth = 1;
+  floor_size = default_floor_size;
+  message_area.innerHTML = `ようこそ果てしなき迷宮へ<br>ここは第${depth}階だ<br>これまで第${max_depth}まで到達しているぞ`;
+
+  is_game_running = 1;
   createNewFloor();
   placeObject('G');
   placeObject('m');
   placeObject('b');
-  depictFloorAndObject();
+  hasFloorUpdate();
+//  depictFloorAndObject();
   window.addEventListener('keyup', keyInput, false);
   runGame();
 }
 
 function runGame() {
-
-  depictFloorAndObject();
+  if(isFloorUpdate()) {
+    depictFloorAndObject();
+    clearFloorUpdate();
+  }
   setTimeout(runGame, 333);  // CPUを３～５％も消費している　くそ
 }
 
@@ -62,11 +79,15 @@ function depictFloorAndObject() {
       if(floor_containts[y * floor_size + x] === 'f') {
         td.innerHTML = "<img src = \"floor.png\">";
       } else if (floor_containts[y * floor_size + x] === 'G') {
-        td.innerHTML = "G";
+        td.innerHTML = "<img src = \"Gate.png\">";
       } else if (floor_containts[y * floor_size + x] === 'b') {
-        td.innerHTML = "b";
+        td.innerHTML = "<img src = \"brave.png\">";
       } else if (floor_containts[y * floor_size + x] === 'm') {
-        td.innerHTML = "m";
+        td.innerHTML = "<img src = \"monster.png\">";
+      } else if (floor_containts[y * floor_size + x] === 'D') {
+        td.innerHTML = "<img src = \"Damaged.png\">";  // DamagedのD
+      } else if (floor_containts[y * floor_size + x] === 'g') {
+        td.innerHTML = "g";  // graveyardのg
       } else {
         // err
       }
@@ -78,28 +99,6 @@ function depictFloorAndObject() {
   floor_area.appendChild(floor_table);
   console.log(floor_area);
 }
-
-
-// get Positionと placeは共通化可能
-/*
-function placeObject(type) {
-  let x, y;
-  let random;
-
-  do {
-    random = Math.floor(Math.random() * (floor_size * floor_size));
-    y = Math.floor(random / floor_size);
-    console.log(y);
-    x = random - y * floor_size;
-    console.log(x);
-    console.log(floor_containts[y * floor_size + x]);
-//  } while(0);
-  } while (floor_containts[y * floor_size + x] !== 'f');
-
-  floor_containts[y * floor_size + x] = type;
-
-}
-*/
 
 
 function placeObject(type) {
@@ -115,10 +114,24 @@ function placeObject(type) {
   floor_containts[position[1] * floor_size + position[0]] = type;
 }
 
+
 function positionArr(position) {
   let y = Math.floor(position / floor_size),
       x = position - y * floor_size;
   return [x, y];
+}
+
+
+function hasFloorUpdate() {
+  change = true;
+}
+
+function clearFloorUpdate() {
+  change = false;
+}
+
+function isFloorUpdate() {
+  return change;
 }
 
 // イベントリスナーのcallback関数だけれど、braveMoveとあまりにも
@@ -139,7 +152,13 @@ function keyInput(event) {
     return; // あまりよくない終わり方
   }
 
-  updateTurn(move_direction);
+  if(is_game_running === 1) {
+    updateTurn(move_direction);
+    hasFloorUpdate();
+  } else { // nothitng done
+    console.log("do nothing");
+    return;
+  }
 //  braveMove(move_direction);
 
 }
@@ -152,13 +171,15 @@ function updateTurn(move_direction) {
       monster_position = monsterMove(), // モンスターの数が増えたら問題
       gate_position = getCurrentPosition('G');
 
-  if(brave_position === gate_position) {
-    clearCurrentFloor();
-    nextFloor();
-  } else if(brave_position === monster_position) {　// モンスターの数が増えたら問題
-    gameOver();
-  } else {
-    updateNextTurn(brave_position, monster_position);
+  if(brave_position >= 0) {
+    if(brave_position === gate_position) {
+      clearCurrentFloor();
+      nextFloor();
+    } else if(brave_position === monster_position) {　// モンスターの数が増えたら問題
+      gameOver(monster_position);
+    } else {
+      updateNextTurn(brave_position, monster_position);
+    }
   }
 
 }
@@ -166,34 +187,57 @@ function updateTurn(move_direction) {
 
 function clearCurrentFloor() {
 // congraturation!
-
+// alert("clearCurrentFloor");
 }
 
 function nextFloor() {
   depth++;
+  floor_size = default_floor_size + Math.floor(depth / 5);
+
+  if(max_depth < depth) {
+    max_depth = depth;
+  }
+  message_area.innerHTML = `ここは第${depth}階だ<br>これまで第${max_depth}まで到達しているぞ`;
+
   createNewFloor();
   placeObject('G');
   placeObject('m');
   placeObject('b');
 }
 
-function gameOver() {
-// disappointed!!!
 
+// gameOverとupdateNextTrunとclearCurrentFloorは共通化できそう
+function gameOver(next_monster_position) {
+// disappointed!!!
+  let current_brave_position = getCurrentPosition('b'),
+      current_monster_position = getCurrentPosition('m');
+
+  floor_containts[current_brave_position] = 'f';
+  floor_containts[current_monster_position] = 'f';
+  floor_containts[next_monster_position] = 'g';
+
+  is_game_running = 0;
+  alert("gameOver");
 }
+
 
 function updateNextTurn(next_brave_position, next_monster_position) {
   let current_brave_position = getCurrentPosition('b'),
       current_monster_position = getCurrentPosition('m');
 
   floor_containts[current_brave_position] = 'f';
-  floor_containts[next_brave_position] = 'b';
   floor_containts[current_monster_position] = 'f';
+  // 順序性がある。floorで上書きしないように
+  floor_containts[next_brave_position] = 'b';
   floor_containts[next_monster_position] = 'm';
 
-  // floorCurruption();
-  placeObject('D');
+  floorCurruption();
 
+}
+
+
+function floorCurruption() {
+  placeObject('D');
 }
 
 
@@ -202,19 +246,31 @@ function braveMove(move_direction) {
   let brave_position = getCurrentPosition('b'),
       next_position = brave_position + move_direction;
 
+  if(brave_position < 0) {
+    throw(new Error("brave disappeared"));
+  }
+
   // braveの移動先、braveの移動方法が正常なら
   if(next_position >= 0 && next_position < floor_size * floor_size) {
     if((move_direction === -1 && positionArr(brave_position)[0] === 0)
       || (move_direction === 1 && positionArr(brave_position)[0] === floor_size - 1)) {
     } else {
-      if(floor_containts[next_position] === 'f') {
-          return next_position;
+      if(floor_containts[next_position] !== 'D') {
+        return next_position;
+      } else {
+        return -1;
       }
     }
   }
 }
 
 
+
+
+// monsterの動きは、
+// 1. 同じ場所委に居座る
+// 2. randomに動き回る
+// 3. braveを追いかける（未実装）
 function monsterMove() {
   let monster_position = getCurrentPosition('m'),
       move_direction,
@@ -227,10 +283,13 @@ function monsterMove() {
      || (monster_position + 1 < floor_size * floor_size && floor_containts[monster_position + 1] === 'f')
      || (monster_position + floor_size < floor_size * floor_size && floor_containts[monster_position + floor_size] === 'f')
    ) {
-
    } else {
      return monster_position;
    }
+
+  if(Math.random() < stayCurrentRatio) {
+     return monster_position;
+  }
 
   do{
     random = Math.random();
@@ -269,14 +328,19 @@ function bravePosition() { // ｘとｙの値は、brave オブジェクトの�
 }
 */
 
+// 頭悪いよね。場所ぐらいプロパティで記憶しておけばいいのに
+// いなければ -1 を返す
 function getCurrentPosition(type) { // ｘとｙの値は、type オブジェクトのプロパティにできる
   let i;
   for(i = 0; i < floor_size * floor_size; i++) {
     if(floor_containts[i] === type) {
-      console.log(i);
+      console.log(`${type}: ${i}`);
       return i;
     }
   }
+
+  return -1; // 見つからなかった
+
 }
 
 
