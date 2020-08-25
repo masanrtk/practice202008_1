@@ -3,6 +3,7 @@ const message_area = document.getElementById("message");
 const floor_area = document.getElementById("floor");
 
 let floor_size,
+    last_floor_size,
     default_floor_size = 5;
 let floor_containts = []; // リファクタリング時はfloorObjectのプロパティ
 let depth = 1,
@@ -25,6 +26,7 @@ function newGame() {
 // removeEventListener();
   depth = 1;
   floor_size = default_floor_size;
+  last_floor_size = floor_size;
   message_area.innerHTML = `ようこそ果てしなき迷宮へ<br>ここは第${depth}階だ<br>これまで第${max_depth}まで到達しているぞ`;
 
   is_game_running = 1;
@@ -40,7 +42,9 @@ function newGame() {
 
 function runGame() {
   if(isFloorUpdate()) {
+    removeClickEventHandler();
     depictFloorAndObject();
+    addClickEventHandler();
     clearFloorUpdate();
   }
   setTimeout(runGame, 333);  // CPUを３～５％も消費している　くそ
@@ -66,16 +70,19 @@ function createNewFloor() { // リファクタリング時はfloorObjectのメ�
 function depictFloorAndObject() {
   let tr, td;
   let x, y;
+  let tile_id;
 
   let floor_table = document.createElement('table');
-  floor_table.className = "floor_table";
+  floor_table.id = "floor_table";
   floor_table.border = "0";
 
+  tile_id = 0;
   for(y = 0; y < floor_size; y++) {
     tr = floor_table.insertRow(-1);
     for(x = 0; x < floor_size; x++) {
       td = tr.insertCell(-1);
-      td.className = `cell${y}${x}`;
+      td.id = `tile${tile_id}`;
+      tile_id++;
       if(floor_containts[y * floor_size + x] === 'f') {
         td.innerHTML = "<img src = \"floor.png\">";
       } else if (floor_containts[y * floor_size + x] === 'G') {
@@ -192,6 +199,7 @@ function clearCurrentFloor() {
 
 function nextFloor() {
   depth++;
+  last_floor_size = floor_size; //とりあえず
   floor_size = default_floor_size + Math.floor(depth / 5);
 
   if(max_depth < depth) {
@@ -329,4 +337,54 @@ function getCurrentPosition(type) { // ｘとｙの値は、type オブジェク
 
   return -1; // 見つからなかった
 
+}
+
+
+// とりあえず今日やりたいことだけを別だし関数として作る
+// tile${id} のElement Objectのリストを入手して
+// そのElementすべてに対してClickイベントハンドラを
+// 登録する
+
+function addClickEventHandler() {
+  let id;
+
+  for(id = 0; id < floor_size * floor_size; id++) {
+    document.getElementById(`tile${id}`).addEventListener('click', clickEventHandler(id));
+  }
+}
+
+function removeClickEventHandler() {
+  let id;
+
+  if(document.getElementById('floor_table') === null) {
+    return; // とりあえず、強制終了
+  }
+  for(id = 0; id < last_floor_size * last_floor_size; id++) {
+    document.getElementById(`tile${id}`).removeEventListener('click', clickEventHandler(id));
+  }
+}
+
+
+function clickEventHandler(id) {
+  return function(event) {
+    let brave_position = getCurrentPosition('b'),
+        move_direction = id - brave_position;
+
+    if(move_direction === -1 // click left
+      || move_direction === -floor_size // click up
+      || move_direction === 1 // click right
+      || move_direction === floor_size) { // click down
+      //
+    } else { // nothing happens
+      return; // あまりよくない終わり方
+    }
+
+    if(is_game_running === 1) {
+      updateTurn(move_direction);
+      hasFloorUpdate();
+    } else { // nothitng done
+      console.log("do nothing");
+      return;
+    }
+  }
 }
