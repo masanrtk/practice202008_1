@@ -47,7 +47,7 @@ function runGame() {
     addClickEventHandler();
     clearFloorUpdate();
   }
-  setTimeout(runGame, 333);  // CPUを３～５％も消費している　くそ
+  setTimeout(runGame, 333);
 }
 
 
@@ -353,7 +353,7 @@ function addClickEventHandler() {
   }
 }
 
-function removeClickEventHandler() {
+function removeClickEventHandler() { // 毎回HTMLからElementを入手するのはいけない気がsる。自分で作成しているのだからその情報を活用したい
   let id;
 
   if(document.getElementById('floor_table') === null) {
@@ -366,7 +366,7 @@ function removeClickEventHandler() {
 
 
 function clickEventHandler(id) {
-  return function(event) {
+  return (function(event) {
     let brave_position = getCurrentPosition('b'),
         move_direction = id - brave_position;
 
@@ -386,5 +386,5 @@ function clickEventHandler(id) {
       console.log("do nothing");
       return;
     }
-  }
+  })
 }
