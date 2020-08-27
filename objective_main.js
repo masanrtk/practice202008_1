@@ -1,5 +1,34 @@
+/*
+const test = {
+  test: {
+    test1: {
+      x: 1,
+      y: 2
+    },
+    test2: {
+      x: 3,
+      y: 4
+    }
+  }
+}
 
+console.log(test.test.test1.x);
+console.log(test.test.test1.y);
+console.log(test.test.test2.x);
+console.log(test.test.test2.y);
 
+test.test.test1 = function() {
+  this.z = 5;
+}
+
+const obj_test = new test.test.test1();
+
+console.log(test.test.test1.z);
+console.log(obj_test.x);
+console.log(obj_test.y);
+console.log(obj_test.z);
+
+*/
 
 const nsGame = {
   cUnit: {},
@@ -12,7 +41,14 @@ const nsGame = {
     cUnitMonsterConstructor: {},
     cFloorConstructor: {}
   },
-  moduleFunctions: {}
+  moduleFunctions: {
+    fMove: {},
+    fPlace: {}
+  },
+  moduleUtilities: {
+    fRunGame: {},
+    fNewGame: {}
+  }
 }
 
 /*
@@ -117,41 +153,39 @@ nsGame.cUnit = function(id) {
   let _current_position,
       _next_position;
   const _id = id,
-        _type = 'u',
-        that = this;
+        _type = 'u';
 
-  this.self = this;
-
-  Object.defineProperty(this, 'position', { // current と next 両方を外に見せないといけない
-    get: function() {
-      console.log(`getter position ${_current_position}`);
-      return _current_position;
+  Object.defineProperties(this, {
+    'position': { // current と next 両方を外に見せないといけない
+      get: function() {
+        console.log(`getter position ${_current_position}`);
+        return _current_position;
+      },
+      enumerable: true,
+      configurable: true
     },
-    enumerable: true,
-    configurable: true
-  });
-  Object.defineProperty(this, 'type', {
-    get: function() {
-      console.log(`getter type ${_type}`);
-      return _type;
+    'type': {
+      get: function() {
+        console.log(`getter type ${_type}`);
+        return _type;
+      },
+      enumerable: true,
+      configurable: true
     },
-    enumerable: true,
-    configurable: true
-  });
-  Object.defineProperty(this, 'id', {
-    get: function() {
-      console.log(`getter id ${_id}`);
-      return _id;
-    },
-    enumerable: true,
-    configurable: true
+    'id': {
+      get: function() {
+        console.log(`getter id ${_id}`);
+        return _id;
+      },
+      enumerable: true,
+      configurable: true
+    }
   });
 
   this.mMove = (move_direction, cFloor = {size, container}) => {
     let ret = fMove(_current_position, move_direction, cFloor);
     console.log(`ret: ${ret}`);
     _next_position = ret === -1 ? _current_position : ret;
-//    _next_position = ret;
     console.log(`_next_position: ${_next_position}`);
   }
 
@@ -160,6 +194,7 @@ nsGame.cUnit = function(id) {
     console.log(`_current_position: ${_current_position}`);
   }
 };
+
 
 nsGame.moduleFunctions.fMove = function(position, move_direction, cFloor = {size, container}) {
   const positionArr = (position, floor_size) => {
@@ -201,11 +236,9 @@ nsGame.moduleFunctions.fMove = function(position, move_direction, cFloor = {size
     }
   }
   return -1;
-
-
 }
-
 var fMove = nsGame.moduleFunctions.fMove;
+
 
 nsGame.moduleFunctions.fPlace = function(cFloor = {size, container}) {
   let random;
@@ -216,21 +249,35 @@ nsGame.moduleFunctions.fPlace = function(cFloor = {size, container}) {
 
   return random;
 }
-
 var fPlace = nsGame.moduleFunctions.fPlace;
+
 
 nsGame.nsConstructors.cUnitConstructor = (function() {
   let _number_of_unit = 0;
 
   return function() {
-    return new nsGame.cUnit(_number_of_unit++);
+    this.mCreateNewInstance = () => {
+      return new nsGame.cUnit(_number_of_unit++);
+    }
+
+    Object.defineProperty(this, 'total_units', {
+      get: function() {
+        console.log(`getter total_units ${_number_of_unit}`);
+        return _number_of_unit;
+      },
+      enumerable: true,
+      configurable: true
+    });
   }
 })();
-
-const cUnitConstructor = nsGame.nsConstructors.cUnitConstructor;
+const cUnitConstructor = new nsGame.nsConstructors.cUnitConstructor();
 // const cUnit = nsGame.cUnit;
 
 
+
+
+
+// ************************************************************
 console.log("nsGame.cUnit");
 console.log(Object.getPrototypeOf(nsGame.cUnit));
 console.log("nsGame.cUnit");
@@ -242,9 +289,15 @@ console.log("cUnitConstructor");
 console.log(Reflect.ownKeys(cUnitConstructor));
 
 
+console.log(`nsGame.cUnit.type: ${nsGame.cUnit.type}`);
+
 let o = new nsGame.cUnit(100);
-let o2 = cUnitConstructor();
-let o3 = cUnitConstructor();
+
+console.log(`total_units: ${cUnitConstructor.total_units}`)
+let o2 = cUnitConstructor.mCreateNewInstance();
+console.log(`total_units: ${cUnitConstructor.total_units}`)
+let o3 = cUnitConstructor.mCreateNewInstance();
+console.log(`total_units: ${cUnitConstructor.total_units}`)
 
 console.log("o");
 console.log(Object.getPrototypeOf(o));
@@ -283,6 +336,12 @@ console.log(`o3.id = ${o3.id}`);
 
 
 console.log(o2 === o3);
+// ************************************************************
+
+
+
+
+
 
 
 
@@ -302,23 +361,58 @@ nsGame.cUnitBrave.prototype = Object.create(nsGame.cUnit.prototype, {
 });
 
 
+
+
+
+
+nsGame.cUnitMonster = function(...args) {
+  nsGame.cUnit.apply(this, args);
+
+  const _type = 'm';
+}
+
+nsGame.cUnitMonster.prototype = Object.create(nsGame.cUnit.prototype, {
+  constructor: {
+    configurable: true,
+    enumerable: true,
+    value: nsGame.cUnitMonster,
+    writable: true
+  }
+});
+
+
+
+
+
+
+
+
 nsGame.nsConstructors.cUnitBraveConstructor = (function() {
   let _number_of_unit = 0;
 
   return function() {
-    return new nsGame.cUnitBrave(_number_of_unit++);
-  }
-})();
+    this.mCreateNewInstance = () => {
+      return new nsGame.cUnitBrave(_number_of_unit++);
+    }
 
-const cUnitBraveConstructor = nsGame.nsConstructors.cUnitBraveConstructor;
-// const cUnit = nsGame.cUnit;
-// const cUnitBrave = nsGame.cUnitBrave;
+    Object.defineProperty(this, 'total_units', {
+      get: function() {
+        console.log(`getter total_units ${_number_of_unit}`);
+        return _number_of_unit;
+      },
+      enumerable: true,
+      configurable: true
+    });
+  }
+
+})();
+const cUnitBraveConstructor = new nsGame.nsConstructors.cUnitBraveConstructor();
 
 
 
 let ob = new nsGame.cUnitBrave(200);
-let ob2 = cUnitBraveConstructor();
-let ob3 = cUnitBraveConstructor();
+let ob2 = cUnitBraveConstructor.mCreateNewInstance();
+let ob3 = cUnitBraveConstructor.mCreateNewInstance();
 
 console.log("ob");
 console.log(Object.getPrototypeOf(ob));
@@ -358,19 +452,3 @@ console.log(`ob3.id = ${ob3.id}`);
 
 
 console.log(ob2 === ob3);
-
-
-nsGame.cUnitMonster = function(...args) {
-  nsGame.cUnit.apply(this, args);
-
-  const _type = 'm';
-}
-
-nsGame.cUnitMonster.prototype = Object.create(nsGame.cUnit.prototype, {
-  constructor: {
-    configurable: true,
-    enumerable: true,
-    value: nsGame.cUnitMonster,
-    writable: true
-  }
-});
