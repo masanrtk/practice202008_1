@@ -1,4 +1,5 @@
-fInitGame(oDisplayArea, fNewGame);  // start everything
+// const oGameObjects = new cGameObjects;
+// fInitGame(oDisplayArea, oGameObjects);  // start everything
 
 
 // module tree
@@ -25,7 +26,19 @@ const nsGame = {
 
 
 
-/* unitオブジェクトの共通クラス */
+/* unitオブジェクトの共通クラス
+
+{
+  position: ,
+  next_position: ,
+  type: ,
+  id: ,
+  mMove: ,
+  mPlace: ,
+  mTurnEnd
+}
+
+ */
 nsGame.cUnit = function(id) {
 //  let _current_position,
 //  let _next_position;
@@ -64,6 +77,7 @@ nsGame.cUnit = function(id) {
 
   this.mPlace = (cFloor = {size, container}) => {
     let ret = fPlace(cFloor);
+    this.next_position = ret; // 最初の初期化ということで、これで許して
     this.position = ret;
     console.log(`this.position: ${this.position}`);
     return ret;
@@ -138,6 +152,19 @@ var fPlace = nsGame.moduleFunctions.fPlace;
 /*
   brave オブジェクト
 
+  {
+    position: ,
+    next_position: ,
+    type: ,
+    id: ,
++   id_per_type: ,
+    mMove: ,
+    mPlace: ,
+    mTurnEnd
++   mGetDirectionByKey: ,
++   mGetirectionByClick: ,
+
+  }
 
  */
 nsGame.cUnitBrave = function(id, id_per_type) {
@@ -233,6 +260,18 @@ var fGetDirectionByClick = nsGame.moduleFunctions.fGetDirectionByClick;
 /*
    monster オブジェクト
 
+  {
+    position: ,
+    next_position: ,
+    type: ,
+    id: ,
++   id_per_type: ,
+    mMove: ,
+    mPlace: ,
+    mTurnEnd
++   mGetDirection
+
+  }
 
   */
 nsGame.cUnitMonster = function(id, id_per_type) {
@@ -388,13 +427,76 @@ const cUnitMonsterConstructor = new nsGame.nsConstructors.cUnitMonsterConstructo
 
 
 
+
+
+
+
+
+/*
+
+
+let om2 = cUnitMonsterConstructor.mCreateInstance();
+
+const omFloor = {
+  size: 4,
+  container: ['f', 'f', 'f', 'f', 'f', 'f', 'f', 'f', 'f', 'f', 'f', 'f', 'f', 'f', 'f', 'f'],
+}
+
+console.log(`om2.position:`);
+om2.mPlace(omFloor);
+console.log(omFloor);
+let om2_direction = om2.mGetDirection(1, omFloor);
+om2.mMove(om2_direction, omFloor);
+console.log(`om2.position: ${om2.position}`);
+
+console.log(`om2.id = ${om2.id}`);
+
+*/
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+/*
+   Floor オブジェクト
+
+   {
+     size: ,
+     container: ,
+     is_floor_update: ,
+     depth: ,
+     mCreateFloor: ,
+     mCurruptTile: ,
+     mUpdateFloorContaint: ,
+     mTurnEnd: ,
+     mClearFloorUpdateFlag
+   }
+
+ */
 nsGame.cFloor = function() {
   const _DEFAULT_SIZE = 5;
-  let _depth = 1;
+  let _depth = 1,
+      _is_floor_update = false;
 
   this.size = _DEFAULT_SIZE;
   this.container = [];
-  this.is_floor_update = false;
+//  this.is_floor_update = false;
 
   Object.defineProperties(this, {
     'depth': {
@@ -409,15 +511,34 @@ nsGame.cFloor = function() {
       },
       enumerable: true,
       configurable: true
+    },
+    'is_floor_update': {
+      get: function() {
+        console.log(`getter _is_floor_update ${_is_floor_update}`);
+        return _is_floor_update;
+      },
+      enumerable: true,
+      configurable: true
     }
+    // , 'container': { }　これは配列に対するセッターを実現するのが難しすぎるのでやめた
+    // これが可能なら、is_floor_update もここだけで更新するようにするのがよさそうだ
   });
 
+  this.mGoNextFllor = function() {
+    this.depth += 1;
+  }
+
   this.mCreateFloor = function() {
-    let i;
+    let i,
+        ret;
     for(i = 0; i < this.size * this.size; i++) {
       this.container[i] = 'f';
     }
-    this.is_floor_update = true;
+    do{
+      ret = fPlace(this);
+    } while(this.container[ret] !== 'f');
+    this.container[ret] = 'G';
+    _is_floor_update = true;
   }
 
   this.mCurruptTile = function() {
@@ -426,7 +547,7 @@ nsGame.cFloor = function() {
       ret = fPlace(this);
     } while(this.container[ret] !== 'f');
     this.container[ret] = 'D';
-    this.is_floor_update = true;
+    _is_floor_update = true;
 
     return ret;
   }
@@ -434,14 +555,14 @@ nsGame.cFloor = function() {
   this.mUpdateFloorContaint = function(cUnit = {type, position, next_position}) {
     this.container[cUnit.position] = 'f';
     this.container[cUnit.next_position] = cUnit.type;
-    this.is_floor_update = true;
+    _is_floor_update = true;
   }
 
   this.mTurnEnd = function() { // 今のところ思い浮かばない
   }
 
   this.mClearFloorUpdateFlag = function() {
-    this.is_floor_update = false;
+    _is_floor_update = false;
   }
 }
 var cFloor = nsGame.cFloor;
@@ -453,61 +574,134 @@ nsGame.cDisplayArea = function() {
   this.areaMessage = document.getElementById("message");
   this.areaFloor = document.getElementById("floor");
 }
-var oDisplayArea = new cDisplayArea();  // 場所がまずいかも～
+var cDisplayArea = nsGame.cDisplayArea;
 
-// このつくりだと連打しても更新されなくなるなぁ（連打が必要とは思えないけれど）
 nsGame.cKeyInput = function() {
+  let _is_key_input = false,
+      _key_code;
+
   window.addEventListener('keyup', this.mKeyCode, false);
-  this.keycode;
-  this.is_key_input = false;
+//  this.keycode;
+//  this.is_key_input = false;
+
+  Object.defineProperties(this, {
+    'is_key_input': {
+      get: function() {
+        console.log(`getter _is_key_input ${_is_key_input}`);
+        return _is_key_input;
+      },
+      enumerable: true,
+      configurable: true
+    },
+    'key_code': {
+      get: function() {
+        console.log(`getter _key_code ${_key_code}`);
+        return _key_code;
+      },
+      enumerable: true,
+      configurable: true
+    }
+  });
 
   this.mKeyCode = function(event) {
-    this.keycode = event.keyCode;
-    is_key_input = true;
+    _keycode = event.keyCode;
+    _is_key_input = true;
   }
 
   this.mClearKeyInputFlag = function() {
-    this.is_key_input = false;
+    _is_key_input = false;
+  }
+  // このつくりだと連打しても更新されなくなるなぁ（連打が必要とは思えないけれど）
+}
+var cKeyInput = nsGame.cKeyInput;
+
+
+// TODO オブジェクトのプロパティ類
+nsGame.cGameObjects = function() {
+  let _aUnitList = [],
+      _number_of_monsters,
+      _max_depth = 1,
+      oFloor = new cFloor();
+
+//  this.max_depth,
+//  this.number_of_monster;
+
+  this.mNewGame = function() {
+    return fNewGame.call(null, this);
   }
 }
+var cGameObjects = nsGame.cGameObjets;
 
-
-
-
+// TODO EventListenerのcallback関数として何を呼ぶべきか
 nsGame.moduleUtilities.fInitGame = function(cDisplayArea = {btnNewGame}, fNewGame) {
+  const oDisplayArea = new cDisplayArea();  // 場所がまずいかも～
+  const oGameObjects = new cGameObjects();
   // ボタンクリックでゲームが始まる
-  cDisplayArea.btnNewGame.addEventListener("click", fNewGame);
+  //  cDisplayArea.btnNewGame.addEventListener("click", fNewGame);
+  cDisplayArea.btnNewGame.addEventListener("click", oGameObjects);
 }
 var fInitGame = nsGame.moduleUtilities.fInitGame;
 
-nsGame.moduleUtilities.fNewGame = function(cFloor = {depth, mCreateFloor}, cDisplayArea = {areaMessage}) {
+// TODO 引数
+nsGame.moduleUtilities.fNewGame = function(cGameObjects = {aUnitList,
+                                                           number_of_monsters,
+                                                           max_depth,
+                                                           oFloor},
+                                           cDisplayArea = {areaMessage}
+                                         ) {
+  let i;
+
   cFloor.depth = 1;
-  cDisplayArea.areaMessage.innerHTML = `ようこそ果てしなき迷宮へ<br>ここは第${depth}階だ<br>これまで第${max_depth}まで到達しているぞ`;
-
-// TODO
-
-// is_game_runningがこの構造で必要かどうかわからない、要調査検討
-//  is_game_running = 1;
   cFloor.mCreateFloor();
-
-  placeObject('G');
-  placeObject('m');
-  placeObject('b');
-  hasFloorUpdate();
-//  depictFloorAndObject();
-  runGame();
+  cDisplayArea.areaMessage.innerHTML = `ようこそ果てしなき迷宮へ<br>ここは第${depth}階だ<br>これまで第${max_depth}まで到達しているぞ`;
+  for(i = 0; i < aUnitList.length; i++) {  // aUnitListを誰がメンテナンスするのか
+    cFloor.mUpdateFloorContaint(cUnit.mPlace(cFloor));
+  }
+  fRunGame();
 }
 var fNewGame = nsGame.moduleUtilities.fNewGame;
 
 
+// TODO
+nsGame.moduleUtilities.fRunGame = function(cKeyInputHandler) {
+  const oKeyInput = cKeyInputHandler || new cKeyInput();
 
-nsGame.moduleUtilities.fRunGame = function() {
+/*  TODO 以降参考資料
+//////////// ゲームの基本的な流れ
+fProgressTune() {
+  // ユニットの移動
+  for(全部のユニット){
+    current_position = instanceUnit.position;
+    next_position = instanceUnit.mMove;
+  }
+  // バトル解決
+  for(全部のユニット){
+    result = brave vs next_position
+  }
+  // フロア更新かゲームオーバーか
+  if(result not loose){
+    for(全部のユニット){}
+      cFloor.mUpdateFloorContaint(cUnit)
+    }
+  } else(loose) {
+    gameOver;
+  }
 
+  while(全部のユニット){
+    instanceUnit.TurnEnd
+  }
+}
+*/
+  setTimeout(fRunGame, 333);
 }
 var fRunGame = nsGame.moduleUtilities.fRunGame;
 
 nsGame.moduleUtilities.fDepict = function(object = {xxx, xxx}) {
 
+}
+
+nsGame.moduleUtilities.fTurnEnd = function(object = {xxx, xxx}) {
+  push(monster)
 }
 
 /*  TODO 以降参考資料
@@ -847,6 +1041,8 @@ console.log("om2");
 console.log(Object.getPrototypeOf(om2));
 console.log("om2");
 console.log(Reflect.ownKeys(om2));
+
+
 
 const omFloor = {
   size: 4,
