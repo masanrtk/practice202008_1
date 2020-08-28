@@ -1,3 +1,6 @@
+fInitGame(oDisplayArea, fNewGame);  // start everything
+
+
 // module tree
 const nsGame = {
   cUnit: {},
@@ -25,11 +28,12 @@ const nsGame = {
 /* unitオブジェクトの共通クラス */
 nsGame.cUnit = function(id) {
 //  let _current_position,
-  let _next_position;
+//  let _next_position;
   const _id = id || 0,
         _type = 'u';
 
   this.position;
+  this.next_position;
 
   Object.defineProperties(this, {
     'type': {
@@ -53,8 +57,8 @@ nsGame.cUnit = function(id) {
   this.mMove = (move_direction, cFloor = {size, container}) => {
     let ret = fMove(this.position, move_direction, cFloor);
     console.log(`ret: ${ret}`);
-    _next_position = ret === -1 ? this.position : ret;
-    console.log(`_next_position: ${_next_position}`);
+    this.next_position = ret === -1 ? this.position : ret;
+    console.log(`this.next_position: ${this.next_position}`);
     return ret;
   }
 
@@ -66,7 +70,8 @@ nsGame.cUnit = function(id) {
   }
 
   this.mTurnEnd = () => {
-    _current_position = _next_position;
+    this.position = this.next_position;
+//    _current_position = _next_position;
   }
 }
 
@@ -319,6 +324,9 @@ nsGame.nsConstructors.cOpaqueUnitConstructor = (function() {
   return function() {
     this.mCreateInstance = (callback, id_per_type) => {
       return new callback(_number_of_unit++, id_per_type);
+  // return callback.call(null, _number_of_unit++, id_per_type);
+  // これでやりたいことができるんじゃないか？
+  // TODO
     }
 
     Object.defineProperty(this, 'total_units', {
@@ -386,6 +394,7 @@ nsGame.cFloor = function() {
 
   this.size = _DEFAULT_SIZE;
   this.container = [];
+  this.is_floor_update = false;
 
   Object.defineProperties(this, {
     'depth': {
@@ -408,82 +417,85 @@ nsGame.cFloor = function() {
     for(i = 0; i < this.size * this.size; i++) {
       this.container[i] = 'f';
     }
+    this.is_floor_update = true;
   }
 
-  this.mCurruptFloor = function() {
+  this.mCurruptTile = function() {
     let ret;
-
     do{
       ret = fPlace(this);
     } while(this.container[ret] !== 'f');
     this.container[ret] = 'D';
+    this.is_floor_update = true;
+
     return ret;
   }
 
-  this.mUpdateFloorContaint = function(new_position, last_postion) {
-
+  this.mUpdateFloorContaint = function(cUnit = {type, position, next_position}) {
+    this.container[cUnit.position] = 'f';
+    this.container[cUnit.next_position] = cUnit.type;
+    this.is_floor_update = true;
   }
 
-  this.mTurnEnd = function() {
+  this.mTurnEnd = function() { // 今のところ思い浮かばない
+  }
 
+  this.mClearFloorUpdateFlag = function() {
+    this.is_floor_update = false;
   }
 }
+var cFloor = nsGame.cFloor;
 
-function hasFloorUpdate() {
-  change = true;
+
+
+nsGame.cDisplayArea = function() {
+  this.btnNewGame = document.getElementById("createfloor");
+  this.areaMessage = document.getElementById("message");
+  this.areaFloor = document.getElementById("floor");
 }
+var oDisplayArea = new cDisplayArea();  // 場所がまずいかも～
 
-function clearFloorUpdate() {
-  change = false;
-}
+// このつくりだと連打しても更新されなくなるなぁ（連打が必要とは思えないけれど）
+nsGame.cKeyInput = function() {
+  window.addEventListener('keyup', this.mKeyCode, false);
+  this.keycode;
+  this.is_key_input = false;
 
-function isFloorUpdate() {
-  return change;
-}
-
-
-//////////// ゲームの基本的な流れ
-fProgressTune() {
-  // ユニットの移動
-  for(全部のユニット){
-    current_position = instanceUnit.position;
-    next_position = instanceUnit.mMove;
-  }
-  // バトル解決
-  for(全部のユニット){
-    result = brave vs next_position
-  }
-  // フロア更新かゲームオーバーか
-  if(result not loose){
-    for(全部のユニット){}
-      instanceFloor.update(next_position[i], current_position[i])
-    }
-  } else(loose) {
-    gameOver;
+  this.mKeyCode = function(event) {
+    this.keycode = event.keyCode;
+    is_key_input = true;
   }
 
-  while(全部のユニット){
-    instanceUnit.TurnEnd
+  this.mClearKeyInputFlag = function() {
+    this.is_key_input = false;
   }
 }
 
 
-nsGame.cDisplay = function() {
-
-}
 
 
-nsGame.moduleUtilities.fInitGame = function() {
+nsGame.moduleUtilities.fInitGame = function(cDisplayArea = {btnNewGame}, fNewGame) {
   // ボタンクリックでゲームが始まる
-  create_floor_btn.addEventListener("click", newGame);
-
-
+  cDisplayArea.btnNewGame.addEventListener("click", fNewGame);
 }
 var fInitGame = nsGame.moduleUtilities.fInitGame;
 
+nsGame.moduleUtilities.fNewGame = function(cFloor = {depth, mCreateFloor}, cDisplayArea = {areaMessage}) {
+  cFloor.depth = 1;
+  cDisplayArea.areaMessage.innerHTML = `ようこそ果てしなき迷宮へ<br>ここは第${depth}階だ<br>これまで第${max_depth}まで到達しているぞ`;
 
-nsGame.moduleUtilities.fNewGame = function() {
+// TODO
 
+// is_game_runningがこの構造で必要かどうかわからない、要調査検討
+//  is_game_running = 1;
+  cFloor.mCreateFloor();
+
+  placeObject('G');
+  placeObject('m');
+  placeObject('b');
+  hasFloorUpdate();
+//  depictFloorAndObject();
+  runGame();
 }
 var fNewGame = nsGame.moduleUtilities.fNewGame;
 
@@ -498,7 +510,31 @@ nsGame.moduleUtilities.fDepict = function(object = {xxx, xxx}) {
 
 }
 
+/*  TODO 以降参考資料
+//////////// ゲームの基本的な流れ
+fProgressTune() {
+  // ユニットの移動
+  for(全部のユニット){
+    current_position = instanceUnit.position;
+    next_position = instanceUnit.mMove;
+  }
+  // バトル解決
+  for(全部のユニット){
+    result = brave vs next_position
+  }
+  // フロア更新かゲームオーバーか
+  if(result not loose){
+    for(全部のユニット){}
+      cFloor.mUpdateFloorContaint(cUnit)
+    }
+  } else(loose) {
+    gameOver;
+  }
 
+  while(全部のユニット){
+    instanceUnit.TurnEnd
+  }
+}
 
 
 
@@ -706,6 +742,32 @@ function clickEventHandler(id) {
 }
 
 
+function keyInput(event) {
+  let key_code = event.keyCode,
+      move_direction;
+
+  if(key_code === 37) {  // move left
+    move_direction = -1;
+  } else if(key_code === 38) { // move up
+    move_direction = -floor_size;
+  } else if(key_code === 39) { // move right
+    move_direction = 1;
+  } else if(key_code === 40) { // move down
+    move_direction = floor_size;
+  } else { // nothing happens
+    return; // あまりよくない終わり方
+  }
+
+  if(is_game_running === 1) {
+    updateTurn(move_direction);
+    hasFloorUpdate();
+  } else { // nothitng done
+    console.log("do nothing");
+    return;
+  }
+//  braveMove(move_direction);
+
+}
 
 
 
