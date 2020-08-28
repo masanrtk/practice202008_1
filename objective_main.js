@@ -130,7 +130,11 @@ var fPlace = nsGame.moduleFunctions.fPlace;
 
 
 
-/* brave オブジェクト */
+/*
+  brave オブジェクト
+
+
+ */
 nsGame.cUnitBrave = function(id, id_per_type) {
   nsGame.cUnit.call(this, id);
 
@@ -221,7 +225,11 @@ var fGetDirectionByClick = nsGame.moduleFunctions.fGetDirectionByClick;
 
 
 
-/* monster オブジェクト */
+/*
+   monster オブジェクト
+
+
+  */
 nsGame.cUnitMonster = function(id, id_per_type) {
   nsGame.cUnit.call(this, id);
 
@@ -301,7 +309,10 @@ nsGame.moduleFunctions.fGetDirection = function(position, stay_ratio, cFloor = {
 var fGetDirection = nsGame.moduleFunctions.fGetDirection;
 
 
+/*
+   コンストラクタ―
 
+ */
 nsGame.nsConstructors.cOpaqueUnitConstructor = (function() {
   let _number_of_unit = 0;
 
@@ -408,7 +419,294 @@ nsGame.cFloor = function() {
     this.container[ret] = 'D';
     return ret;
   }
+
+  this.mUpdateFloorContaint = function(new_position, last_postion) {
+
+  }
+
+  this.mTurnEnd = function() {
+
+  }
 }
+
+function hasFloorUpdate() {
+  change = true;
+}
+
+function clearFloorUpdate() {
+  change = false;
+}
+
+function isFloorUpdate() {
+  return change;
+}
+
+
+//////////// ゲームの基本的な流れ
+fProgressTune() {
+  // ユニットの移動
+  for(全部のユニット){
+    current_position = instanceUnit.position;
+    next_position = instanceUnit.mMove;
+  }
+  // バトル解決
+  for(全部のユニット){
+    result = brave vs next_position
+  }
+  // フロア更新かゲームオーバーか
+  if(result not loose){
+    for(全部のユニット){}
+      instanceFloor.update(next_position[i], current_position[i])
+    }
+  } else(loose) {
+    gameOver;
+  }
+
+  while(全部のユニット){
+    instanceUnit.TurnEnd
+  }
+}
+
+
+nsGame.cDisplay = function() {
+
+}
+
+
+nsGame.moduleUtilities.fInitGame = function() {
+  // ボタンクリックでゲームが始まる
+  create_floor_btn.addEventListener("click", newGame);
+
+
+}
+var fInitGame = nsGame.moduleUtilities.fInitGame;
+
+
+nsGame.moduleUtilities.fNewGame = function() {
+
+}
+var fNewGame = nsGame.moduleUtilities.fNewGame;
+
+
+
+nsGame.moduleUtilities.fRunGame = function() {
+
+}
+var fRunGame = nsGame.moduleUtilities.fRunGame;
+
+nsGame.moduleUtilities.fDepict = function(object = {xxx, xxx}) {
+
+}
+
+
+
+
+
+const create_floor_btn = document.getElementById("createfloor");
+const message_area = document.getElementById("message");
+const floor_area = document.getElementById("floor");
+
+let floor_size,
+    last_floor_size,
+    default_floor_size = 5;
+let floor_containts = []; // リファクタリング時はfloorObjectのプロパティ
+let depth = 1,
+    max_depth = 1;
+
+let is_game_running = 0; // geme実行中かどうか、名前よくないな
+
+let stayCurrentRatio = 0.3; // 同じ場所に居続ける確率（固定値でよいか？）
+
+
+let change; // これも名前悪い
+
+// let direction;
+
+// ボタンクリックでゲームが始まる
+create_floor_btn.addEventListener("click", newGame);
+
+function newGame() {
+// stopOldGame();
+// removeEventListener();
+  depth = 1;
+  floor_size = default_floor_size;
+  last_floor_size = floor_size;
+  message_area.innerHTML = `ようこそ果てしなき迷宮へ<br>ここは第${depth}階だ<br>これまで第${max_depth}まで到達しているぞ`;
+
+  is_game_running = 1;
+  createNewFloor();
+  placeObject('G');
+  placeObject('m');
+  placeObject('b');
+  hasFloorUpdate();
+//  depictFloorAndObject();
+  window.addEventListener('keyup', keyInput, false);
+  runGame();
+}
+
+function runGame() {
+  if(isFloorUpdate()) {
+    removeClickEventHandler();
+    depictFloorAndObject();
+    addClickEventHandler();
+    clearFloorUpdate();
+  }
+  setTimeout(runGame, 333);
+}
+
+
+function updateTurn(move_direction) {
+  let brave_position = braveMove(move_direction),
+      monster_position = monsterMove(), // モンスターの数が増えたら問題
+      gate_position = getCurrentPosition('G');
+
+  if(brave_position >= 0) {
+    if(brave_position === gate_position) {
+      clearCurrentFloor();
+      nextFloor();
+    } else if(brave_position === monster_position) {　// モンスターの数が増えたら問題
+      gameOver(monster_position);
+    } else {
+      updateNextTurn(brave_position, monster_position);
+    }
+  }
+
+}
+
+function updateNextTurn(next_brave_position, next_monster_position) {
+  let current_brave_position = getCurrentPosition('b'),
+      current_monster_position = getCurrentPosition('m');
+
+  floor_containts[current_brave_position] = 'f';
+  floor_containts[current_monster_position] = 'f';
+  // 順序性がある。floorで上書きしないように
+  floor_containts[next_brave_position] = 'b';
+  floor_containts[next_monster_position] = 'm';
+
+  floorCurruption();
+
+}
+
+
+
+function depictFloorAndObject() {
+  let tr, td;
+  let x, y;
+  let tile_id;
+
+  let floor_table = document.createElement('table');
+  floor_table.id = "floor_table";
+  floor_table.border = "0";
+
+  tile_id = 0;
+  for(y = 0; y < floor_size; y++) {
+    tr = floor_table.insertRow(-1);
+    for(x = 0; x < floor_size; x++) {
+      td = tr.insertCell(-1);
+      td.id = `tile${tile_id}`;
+      tile_id++;
+      if(floor_containts[y * floor_size + x] === 'f') {
+        td.innerHTML = "<img src = \"floor.png\">";
+      } else if (floor_containts[y * floor_size + x] === 'G') {
+        td.innerHTML = "<img src = \"Gate.png\">";
+      } else if (floor_containts[y * floor_size + x] === 'b') {
+        td.innerHTML = "<img src = \"brave.png\">";
+      } else if (floor_containts[y * floor_size + x] === 'm') {
+        td.innerHTML = "<img src = \"monster.png\">";
+      } else if (floor_containts[y * floor_size + x] === 'D') {
+        td.innerHTML = "<img src = \"Damaged.png\">";  // DamagedのD
+      } else if (floor_containts[y * floor_size + x] === 'g') {
+        td.innerHTML = "g";  // graveyardのg
+      } else {
+        // err
+      }
+    }
+  }
+
+  floor_area.innerHTML = "";  // これ問題ないかな？
+
+  floor_area.appendChild(floor_table);
+  console.log(floor_area);
+}
+
+function nextFloor() {
+  depth++;
+  last_floor_size = floor_size; //とりあえず
+  floor_size = default_floor_size + Math.floor(depth / 5);
+
+  if(max_depth < depth) {
+    max_depth = depth;
+  }
+  message_area.innerHTML = `ここは第${depth}階だ<br>これまで第${max_depth}まで到達しているぞ`;
+
+  createNewFloor();
+  placeObject('G');
+  placeObject('m');
+  placeObject('b');
+}
+
+function gameOver(next_monster_position) {
+// disappointed!!!
+  let current_brave_position = getCurrentPosition('b'),
+      current_monster_position = getCurrentPosition('m');
+
+  floor_containts[current_brave_position] = 'f';
+  floor_containts[current_monster_position] = 'f';
+  floor_containts[next_monster_position] = 'g';
+
+  is_game_running = 0;
+  alert("gameOver");
+}
+
+
+
+
+function addClickEventHandler() {
+  let id;
+
+  for(id = 0; id < floor_size * floor_size; id++) {
+    document.getElementById(`tile${id}`).addEventListener('click', clickEventHandler(id));
+  }
+}
+
+function removeClickEventHandler() { // 毎回HTMLからElementを入手するのはいけない気がsる。自分で作成しているのだからその情報を活用したい
+  let id;
+
+  if(document.getElementById('floor_table') === null) {
+    return; // とりあえず、強制終了
+  }
+  for(id = 0; id < last_floor_size * last_floor_size; id++) {
+    document.getElementById(`tile${id}`).removeEventListener('click', clickEventHandler(id));
+  }
+}
+
+
+function clickEventHandler(id) {
+  return (function(event) {
+    let brave_position = getCurrentPosition('b'),
+        move_direction = id - brave_position;
+
+    if(move_direction === -1 // click left
+      || move_direction === -floor_size // click up
+      || move_direction === 1 // click right
+      || move_direction === floor_size) { // click down
+      //
+    } else { // nothing happens
+      return; // あまりよくない終わり方
+    }
+
+    if(is_game_running === 1) {
+      updateTurn(move_direction);
+      hasFloorUpdate();
+    } else { // nothitng done
+      console.log("do nothing");
+      return;
+    }
+  })
+}
+
+
+
 
 
 
